@@ -15,6 +15,10 @@ And then execute:
 Or install it yourself as:
 
     $ gem install motion-strscan
+    
+Edit the Rakefile of your RubyMotion project and add the following require line
+
+    require 'motion-strscan'
 
 ## Implementation details
 
