@@ -1,0 +1,12 @@
+describe "StringScanner#reset" do
+  before do
+    @s = StringScanner.new("This is a test")
+  end
+
+  it "reset the scan pointer and clear matching data" do
+    @s.scan(/This/)
+    @s.reset
+    @s.pos.should == 0
+    @s.matched.should == nil
+  end
+end
