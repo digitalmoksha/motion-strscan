@@ -140,6 +140,10 @@ class StringScanner
   #
   attr_reader :string, :char_pos, :byte_pos
 
+  def self.regex_cache
+    @@regex_cache
+  end
+
   # This method is defined for backward compatibility.
   #
   def self.must_C_version
@@ -152,6 +156,8 @@ class StringScanner
   # +dup+ argument is obsolete and not used now.
   #
   def initialize(string, dup = false)
+    @@regex_cache ||= {}
+    
     begin
       @string = string.to_str
     rescue
@@ -647,8 +653,31 @@ class StringScanner
     @match.post_match if matched?
   end
 
-  private
+  # Check to see if a specific regular expression has been cached
+  #------------------------------------------------------------------------------
+  def self.regex_cached?(cache_key)
+    @@regex_cache[cache_key] ? true : false
+  end
+  
+  # Get cached regular expression
+  #------------------------------------------------------------------------------
+  def self.get_regex(cache_key)
+    @@regex_cache[cache_key]
+  end
+  
+  # Cache a regular expression.  This is particulary useful for the headonly
+  # option in _scan, so thay we don't create the same regex over and over.
+  # Caused a serious performance problem
+  #
+  # These methods can be used by other user methods to cache their regular expressions
+  #------------------------------------------------------------------------------
+  def self.cache_regex(cache_key, regexp)
+    @@regex_cache[cache_key] = regexp
+  end
 
+private
+
+  #------------------------------------------------------------------------------
   def _scan(pattern, succptr, getstr, headonly)
     raise TypeError, "wrong argument type #{pattern.class.name} (expected Regexp)" unless
       Regexp === pattern
@@ -657,7 +686,10 @@ class StringScanner
     rest = @byte_pos == 0 ? @string : self.rest
 
     if headonly
-      headonly_pattern = Regexp.new("\\A(?:#{pattern.source})", pattern.options)
+      unless (headonly_pattern = StringScanner.get_regex("#{pattern.source}/#{pattern.options}"))
+        headonly_pattern = Regexp.new("\\A(?:#{pattern.source})", pattern.options)
+        StringScanner.cache_regex("#{pattern.source}/#{pattern.options}", headonly_pattern)
+      end
       @match = headonly_pattern.match rest
     else
       @match = pattern.match rest
